@@ -39,6 +39,42 @@ def extract_names_from_url(urls):
     driver.quit()
     return names
 
+def extract_names_from_url_multiplepages(urls):
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    names = []
+    
+    for url, state, year in zip(urls['x'], urls['State'], urls['Year']):
+        driver.get(url)
+        
+        while True:
+            page_source = driver.page_source
+            soup = BeautifulSoup(page_source, "html.parser")
+            table = soup.find('table', class_='w3-table w3-bordered')
+
+            if table:
+                rows = table.find_all('tr')
+                for row in rows:
+                    cols = row.find_all('td')
+                    for col in cols:
+                        a_tag = col.find('a')
+                        if a_tag:
+                            name = a_tag.get_text().strip()
+                            names.append({'Candidate': name, 'State': state, 'Year': year})
+            
+            # Try to find the "Next" button and click it
+            try:
+                next_button = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.LINK_TEXT, 'Next'))
+                )
+                if 'disabled' in next_button.get_attribute('class'):
+                    break  # No more pages
+                next_button.click()
+            except:
+                break  # No more pages or "Next" button not found
+
+    driver.quit()
+    return names
+
 
 # Read Required Data from .csv files
 urls = pd.read_csv("D:/E(prev)/Acads(Official)/NUS Summer/Project_S/Final_links.csv")
